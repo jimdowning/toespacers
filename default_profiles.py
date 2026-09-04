@@ -5,19 +5,25 @@ post's silhouette from the plate (h=0) to its tip (h=1), radius as a
 multiple of the waist radius - see README ("Fitting your feet: what to
 edit") for what the shape means. These started as a reverse-engineering of
 the original mesh (tools/extract_profiles.py + tools/derive_config.py,
-verified against it - see README, "Verifying the recreation"), with one
-deliberate deviation since: the base flare (the point nearest h=0, where
-the post meets the plate) was rescaled from the original's ~2.1-2.4x the
-waist radius down to a flat 1.5x, per-post - each base-side point between
-h=0 and the waist scaled by the same factor toward 1.0 (the waist itself)
-so the taper stays smooth and still lands exactly on the measured waist;
-the waist and everything above it (the cap bulge, needed for TPU's flex -
-see README, "How the shape works") are untouched, still the original
-measured curve. Not something to hand-tune day-to-day, so this lives here
-rather than being repeated in every configs/*.json file. A config can
-still set an explicit `profile` per-post to override this (e.g. for
-deliberate reshaping); generate.py and plate_outline.py both fall back to
-this module via get_profile() whenever a post has none of its own.
+verified against it - see README, "Verifying the recreation"), with two
+deliberate deviations since, both per-post affine rescales of the measured
+curve that keep the waist (r=1.0, unaffected either way) and the taper
+either side of it smooth:
+- the base flare (the point nearest h=0, where the post meets the plate)
+  was rescaled from the original's ~2.1-2.4x the waist radius down to a
+  flat 1.5x, each point between h=0 and the waist scaled toward 1.0 by the
+  same factor.
+- the cap bulge above the waist (needed for TPU's flex - see README, "How
+  the shape works") was rescaled so its own peak, whatever height fraction
+  it actually occurs at, also lands on exactly 1.5x - matching the base -
+  instead of the original's ~1.55-1.77x; every point between the waist and
+  the peak scaled the same way. The final [1.0, 0.0] point (the dome tip)
+  is untouched, still an exact point.
+Not something to hand-tune day-to-day, so this lives here rather than being
+repeated in every configs/*.json file. A config can still set an explicit
+`profile` per-post to override this (e.g. for deliberate reshaping);
+generate.py and plate_outline.py both fall back to this module via
+get_profile() whenever a post has none of its own.
 """
 
 DEFAULT_PROFILES = {
@@ -29,13 +35,13 @@ DEFAULT_PROFILES = {
         [0.3841, 1.0195],
         [0.4434, 1.0048],
         [0.5027, 1.0],
-        [0.5301, 1.0062],
-        [0.6168, 1.0534],
-        [0.6761, 1.1235],
-        [0.7856, 1.3443],
-        [0.9179, 1.7638],
-        [0.9361, 1.7729],
-        [0.9681, 1.7356],
+        [0.5301, 1.004],
+        [0.6168, 1.0345],
+        [0.6761, 1.0799],
+        [0.7856, 1.2227],
+        [0.9179, 1.4941],
+        [0.9361, 1.5],
+        [0.9681, 1.4759],
         [1.0, 0.0],
     ],
     'post_B': [
@@ -46,12 +52,12 @@ DEFAULT_PROFILES = {
         [0.3763, 1.0242],
         [0.4397, 1.006],
         [0.5032, 1.0],
-        [0.5666, 1.0148],
-        [0.6353, 1.0649],
-        [0.7569, 1.2451],
-        [0.9101, 1.6306],
-        [0.9471, 1.6216],
-        [0.9683, 1.5818],
+        [0.5666, 1.0117],
+        [0.6353, 1.0515],
+        [0.7569, 1.1943],
+        [0.9101, 1.5],
+        [0.9471, 1.4929],
+        [0.9683, 1.4613],
         [1.0, 0.0],
     ],
     'post_C': [
@@ -62,13 +68,13 @@ DEFAULT_PROFILES = {
         [0.3676, 1.0283],
         [0.4326, 1.0073],
         [0.5035, 1.0],
-        [0.5745, 1.0177],
-        [0.6395, 1.064],
-        [0.7695, 1.2534],
-        [0.8759, 1.5153],
-        [0.9054, 1.5512],
-        [0.9409, 1.5391],
-        [0.9645, 1.4989],
+        [0.5745, 1.0161],
+        [0.6395, 1.0581],
+        [0.7695, 1.2299],
+        [0.8759, 1.4674],
+        [0.9054, 1.5],
+        [0.9409, 1.489],
+        [0.9645, 1.4526],
         [1.0, 0.0],
     ],
     'post_D_pinky': [
@@ -79,13 +85,13 @@ DEFAULT_PROFILES = {
         [0.3794, 1.0264],
         [0.4326, 1.0082],
         [0.5035, 1.0],
-        [0.5745, 1.0194],
-        [0.6454, 1.0775],
-        [0.7163, 1.1758],
-        [0.7813, 1.3061],
-        [0.9054, 1.6114],
-        [0.9291, 1.6088],
-        [0.9645, 1.5426],
+        [0.5745, 1.0159],
+        [0.6454, 1.0634],
+        [0.7163, 1.1438],
+        [0.7813, 1.2503],
+        [0.9054, 1.5],
+        [0.9291, 1.4979],
+        [0.9645, 1.4437],
         [1.0, 0.0],
     ],
 }
