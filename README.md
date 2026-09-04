@@ -76,11 +76,24 @@ print settings directly, rather than starting from whatever profile was
 last active, or from a plain-geometry import warning. Both feet share one
 plate when combined with `--both`. Sparse infill defaults to gyroid at 10%
 (override with `--infill-pattern` / `--infill-density`); every other setting
-- printer (Bambu Lab X1 Carbon, 0.4mm nozzle), the TPU filament slot,
-0.2mm layers, wall count - is cloned from this project's own reference file
-(`../Fußspreitzer+v2+v4.3mf`, a real Bambu Studio project saved by Studio
-itself), so it's the same baseline this README already recommends, not a
-guess.
+- printer (**Bambu Lab A1 mini, 0.4mm nozzle, no AMS**), the single TPU
+filament, 0.2mm layers, wall count - is cloned from `bambu_a1_mini_tpu_
+settings.json`, a flattened Bambu Studio settings document built by
+resolving Bambu Studio's own bundled system presets (machine `Bambu Lab A1
+mini 0.4 nozzle`, process `0.20mm Standard @BBL A1M`, filament `Bambu TPU
+90A @BBL A1M`) rather than guessed by hand, and cross-checked against
+several of this printer's own real single-filament project files. To
+regenerate it against a future Bambu Studio release (or for a different
+printer/filament), the simplest path doesn't need this project's resolver
+at all: in Bambu Studio, start a new project on the target printer, pick a
+single filament and process, save the project as a `.3mf`, then copy that
+project's `Metadata/project_settings.config` out as the new
+`bambu_a1_mini_tpu_settings.json` (`load_print_settings` in
+`bambu_project.py` reads either a `.3mf` or a flattened `.json` directly).
+`--bambu` no longer touches `../Fußspreitzer+v2+v4.3mf` at all - that file
+is still used elsewhere (`tools/extract_profiles.py`, `tools/compare.py`)
+purely as the original mesh being reverse-engineered, unrelated to print
+settings.
 
 ```bash
 ./run.sh generate.py configs/config.json outputs/output --both --bambu
@@ -117,9 +130,10 @@ edges on one object needing repair. Both are fixed now (see
   in the thousands beforehand, zero after, for every object.
 
 Also added `Metadata/model_settings.config`, assigning every object to
-filament slot 7 (`extruder`, matching where the reference project's own
-filament list has TPU) - without it Studio defaults every incoming object to
-slot 1 regardless of what's actually loaded there.
+filament slot 1 (`extruder`, the only slot on a single-filament, no-AMS
+setup) - without it Studio defaults every incoming object to slot 1 anyway,
+but the assignment is still written explicitly so it stays correct if a
+second filament is ever added.
 
 ## Fitting your feet: what to edit
 

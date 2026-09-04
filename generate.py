@@ -208,10 +208,10 @@ def main():
         print(f"wrote {args.out_prefix}_left.stl  volume={left.volume:.2f}  bbox={left.bounding_box()}")
 
     if args.bambu:
-        # borrows print settings (printer, TPU filament slot, layer height,
-        # walls, ...) from this project's own reference file, a real Bambu
-        # Studio project - see bambu_project.py's docstring.
-        template = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Fußspreitzer+v2+v4.3mf')
+        # borrows print settings (printer, filament, layer height, walls,
+        # ...) from bambu_a1_mini_tpu_settings.json - a Bambu Lab A1 mini,
+        # no AMS, single TPU filament - see bambu_project.py's docstring.
+        template = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bambu_a1_mini_tpu_settings.json')
         named_parts = [('toe_spacer_right', right)]
         if args.both:
             named_parts.append(('toe_spacer_left', left))

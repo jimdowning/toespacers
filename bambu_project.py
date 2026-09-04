@@ -21,9 +21,9 @@ inline-mesh 3MF this module first tried:
   not inlined directly into `3dmodel.model`'s own `<resources>`.
 - `Metadata/model_settings.config` assigns each object to a filament slot
   (`extruder`) and lists per-object mesh stats - without it, Studio doesn't
-  know which AMS slot to print each object with and silently defaults to
-  slot 1, not whichever slot the reference project's filament list actually
-  has TPU in.
+  know which slot to print each object with and silently defaults to slot 1
+  (harmless here, since slot 1 - `extruder`'s own default - is also the only
+  slot a single-filament, no-AMS setup has).
 
 Second design note - the mesh itself: the first version of this module
 tessellated each build123d shape face-by-face and wrote every face's
@@ -39,6 +39,21 @@ confirmed by counting edges that appear in only one triangle, both ways: on
 the order of 16000 with raw per-face vertices, and exactly 0 once vertices
 are deduplicated by rounded position first (see `_dedupe_mesh`). Every mesh
 below goes through that dedup before being written.
+
+Third design note - print settings, and where they come from: this module
+just clones `Metadata/project_settings.config` from `template_path` and
+applies overrides (see `load_print_settings`); it has no opinion on what
+printer/process/filament that settings document actually describes. The
+default template `generate.py` passes in, `bambu_a1_mini_tpu_settings.json`,
+is a *flattened* Bambu Studio settings document (not a .3mf) built for a
+Bambu Lab A1 mini with no AMS and a single TPU filament - see the README
+("Generating a ready-to-slice Bambu Studio project") for exactly how it was
+produced and how to regenerate it against a future Bambu Studio release.
+`load_print_settings` accepts either shape (`.json` read directly, `.3mf`
+unzipped as before) so an actual reference project.3mf - like the original
+`../Fußspreitzer+v2+v4.3mf`, still used above only to learn this module's
+package structure, not for its print settings - still works as a template
+too.
 """
 import datetime
 import json
@@ -195,8 +210,9 @@ def _top_model_xml(objects, application, creation_date):
 def _model_settings_xml(objects, extruder):
     """`Metadata/model_settings.config`: per-object name/filament-slot
     assignment and mesh stats, plus the single-plate assembly - without
-    this, Studio defaults every object to filament slot 1 rather than
-    whichever slot actually holds TPU."""
+    this, Studio silently defaults every object to filament slot 1 instead
+    of whichever slot `extruder` actually names (a no-op with today's
+    single-filament default, but still needed if that ever changes)."""
     lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<config>']
     for o in objects:
         lines += [
@@ -242,26 +258,33 @@ def _model_settings_xml(objects, extruder):
 
 def load_print_settings(template_path, **overrides):
     """Read `Metadata/project_settings.config` (a JSON document) out of an
-    existing Bambu Studio project .3mf, with any of its keys overridden."""
-    with zipfile.ZipFile(template_path) as z:
-        settings = json.loads(z.read('Metadata/project_settings.config'))
+    existing Bambu Studio project .3mf, or (if `template_path` ends in
+    `.json`) load that flattened settings document directly - see
+    `bambu_a1_mini_tpu_settings.json` and its own note on how it was built.
+    Either way, any of its keys can be overridden."""
+    if str(template_path).endswith('.json'):
+        settings = json.load(open(template_path))
+    else:
+        with zipfile.ZipFile(template_path) as z:
+            settings = json.loads(z.read('Metadata/project_settings.config'))
     settings.update(overrides)
     return settings
 
 
-def write_bambu_project(path, named_parts, template_path, extruder=7,
+def write_bambu_project(path, named_parts, template_path, extruder=1,
                          application='BambuStudio-02.07.01.57', creation_date=None,
                          tessellate_tolerance=1e-3, tessellate_angular_tolerance=0.1,
                          **settings_overrides):
     """Write a Bambu Studio project .3mf to `path`: one plate holding one
     build item per (name, build123d Shape) in `named_parts`, laid out with
     guaranteed clearance (see `_place_on_plate`), plus print settings cloned
-    from `template_path` (another Bambu Studio project .3mf) with
+    from `template_path` (another Bambu Studio project .3mf, or a flattened
+    `.json` settings document - see `load_print_settings`) with
     `settings_overrides` applied - e.g. `sparse_infill_pattern='gyroid'`.
-    `extruder` is the 1-based AMS/filament slot every object is assigned to
-    (default 7, matching TPU's slot in the reference project's filament
-    list - see module docstring); check it matches your own filament setup
-    if you've changed the cloned settings' filament list.
+    `extruder` is the 1-based filament slot every object is assigned to
+    (default 1, the only slot there is on a single-filament, no-AMS setup -
+    see `bambu_a1_mini_tpu_settings.json`); check it matches your own
+    filament setup if you've changed the cloned settings' filament list.
     """
     if creation_date is None:
         creation_date = datetime.date.today().isoformat()
