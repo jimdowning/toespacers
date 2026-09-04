@@ -161,7 +161,9 @@ Open `configs/config.json`. Each post has:
   below), so `waist_rx` always ends up pointing roughly along the line
   between neighbouring toes and `waist_ry` across it, whichever way the
   arch is actually turning at that post.
-- **`height`** — apex height above the plate. Not in your original ask but
+- **`height`** — apex height above the plate, *before* the rounded dome cap
+  gets added on top (see "How the shape works" below) - the actual printed
+  post ends up a few mm taller than this. Not in your original ask but
   cheap to expose; shorten/lengthen a post if the fit calls for it.
 
 There's no `profile` field to edit either — each post's silhouette (the list
@@ -215,16 +217,34 @@ places.)
 
 Each post is a lofted, roughly-axisymmetric solid: wide flared base merging
 into the plate → narrows to the waist (~50% height in the original) → bulges
-back out to a rounded cap (~90-95% height) → tapers to a small dome apex.
-Think spool/hourglass, not a plain cylinder. `generate.py` builds this as a
-sequence of ellipses (from the post's profile - `default_profiles.py`,
-unless the config overrides it - scaled by `waist_rx`/`waist_ry`) lofted
-with straight (`ruled`) segments between them — a true smooth spline loft was
-tried first but overshot past its end sections (bulging past the profile's
-own bounds); the ruled loft with ~15 profile points per post tracks the
-measured curve closely without that artifact. Posts are sunk 0.5mm into the
-plate before the union so they properly fuse into one watertight solid
-instead of five separately-closed shells that only touch.
+back out to a rounded cap, peaking at the same radius as the base → domes
+smoothly to the apex. Think spool/hourglass with a rounded pin-head on top,
+not a plain cylinder. `generate.py` builds this as a sequence of ellipses
+(from the post's profile - `default_profiles.py`, unless the config
+overrides it - scaled by `waist_rx`/`waist_ry`) lofted with straight
+(`ruled`) segments between them — a true smooth spline loft was tried first
+but overshot past its end sections (bulging past the profile's own bounds);
+the ruled loft with ~15 profile points per post tracks the measured curve
+closely without that artifact. Posts are sunk 0.5mm into the plate before
+the union so they properly fuse into one watertight solid instead of five
+separately-closed shells that only touch.
+
+The profile stored in `default_profiles.py` still ends the way it was
+measured off the original mesh: the cap bulge peaks, then tapers away
+sharply toward a point over a very short remaining height - which reads as
+close to a flat top, since the profile's own leftover height budget above
+the peak is normally far too short for a dome that wide. `build_foot`
+replaces that ending on every post, at build time, with a proper
+hemi-ellipsoid dome sized off that post's own actual `waist_rx`/`waist_ry`
+(`domed_profile` in `generate.py`, mirroring how `test_fit_profile` already
+builds its own rounded test-print cap - see below) - extending the post's
+total height by the dome's own radius so it's a genuinely rounded bulb, not
+a squashed one, at the cost of each post ending up a few mm taller than its
+config `height` alone would suggest. A hemi-ellipsoid rather than a
+hemisphere because the post's cross-section is already an ellipse whenever
+`waist_rx != waist_ry`, and the dome's vertical extent is sized off their
+*mean*, not assumed to equal either one - a true hemisphere only in the
+circular case.
 
 ## How the plate outline works
 

@@ -117,6 +117,59 @@ def test_fit_profile(profile, height, waist_rx, waist_ry, cylinder_length=5.0, s
     return new_profile, new_height
 
 
+def domed_profile(profile, height, waist_rx, waist_ry, samples=16):
+    """Replace everything above the cap bulge's own peak (its widest point,
+    above the waist) with a proper hemi-ellipsoid dome down to the apex,
+    instead of `profile`'s own default ending: a couple of points that
+    barely taper before one final straight ruled segment drops almost
+    straight to the apex point - close enough to a flat plateau then a cut
+    that it visibly reads as a flat top, and costs the print the smooth,
+    continuously-curved surface a toe actually cams sideways over (see
+    README, "How the shape works", on why the bulge needs to be something a
+    toe can flex past at all). Applied to every post's profile at build
+    time - not just `test_fit_profile`'s reduced test shape - so it always
+    matches that post's own actual `waist_rx`/`waist_ry`, whatever config
+    supplies them. Returns (new_profile, new_height); `height`/`waist_rx`/
+    `waist_ry` are the post's existing scalars, `profile` its existing list
+    of [height_fraction, radius_scale] points (see plate config docs).
+
+    A hemi-ellipsoid, not a hemisphere, for two reasons: its horizontal
+    cross-section is already an ellipse (`waist_rx`/`waist_ry` independently,
+    same as the rest of the post - see `build_post`) whenever the two
+    differ, and its vertical extent is sized off their *mean*, not assumed
+    to equal either one - so the dome is only a true hemisphere in the
+    circular, `waist_rx == waist_ry` case.
+
+    Sized off the actual mm waist radii (not the profile's fixed height
+    budget above the peak, which is normally far too short for a dome that
+    wide - see module docstring's dome-sizing note), so this genuinely
+    extends the post's total height, the same way `test_fit_profile`
+    already extends it to fit its own hemisphere cap.
+    """
+    # same walk-forward convention as test_fit_profile: rscale decreases
+    # from the base to the waist, then rises again into the bulge - so the
+    # peak (this function's concern) is the *last* local maximum before the
+    # profile's final point (the apex, always r=0, never the peak).
+    k = 0
+    while k + 1 < len(profile) and profile[k + 1][1] < profile[k][1]:
+        k += 1  # k is now the waist index
+    i_peak = max(range(k, len(profile) - 1), key=lambda i: profile[i][1])
+    h_peak_frac, r_peak_scale = profile[i_peak]
+    h_peak = h_peak_frac * height
+    r_dome = r_peak_scale * (waist_rx + waist_ry) / 2.0  # mean, matching
+    # test_fit_profile's own dome-radius convention (see its docstring)
+
+    new_height = h_peak + r_dome
+    new_profile = [[hf * height / new_height, rs] for hf, rs in profile[:i_peak + 1]]
+    for i in range(1, samples + 1):
+        theta = (math.pi / 2) * i / samples
+        z = r_dome * math.sin(theta)
+        rs = r_peak_scale * math.cos(theta)
+        new_profile.append([(h_peak + z) / new_height, rs])
+    new_profile[-1][1] = 0.0  # exact apex, matching the full-profile convention
+    return new_profile, new_height
+
+
 def select_pillars(posts, mask):
     """Keep only the posts selected by `mask`, a bitmask over `posts` in
     list order: bit 0 (value 1) is the first post (the big toe/first toe
@@ -141,12 +194,19 @@ def build_foot(config, mirror=False, test_fit=False, pillars=None):
     if mirror:
         posts = [{**p, 'x': -p['x']} for p in posts]
     posts = select_pillars(posts, pillars)
-    if test_fit:
-        new_posts = []
-        for p in posts:
+    # Every post gets its default cone-to-a-point ending swapped for a
+    # proper hemi-ellipsoid dome (domed_profile) or, under --test-fit,
+    # replaced entirely above the waist (test_fit_profile) - either way,
+    # every post ends up with an explicit 'profile'/'height' of its own
+    # rather than relying on get_profile()'s default lookup further down.
+    new_posts = []
+    for p in posts:
+        if test_fit:
             profile, height = test_fit_profile(get_profile(p), p['height'], p['waist_rx'], p['waist_ry'])
-            new_posts.append({**p, 'profile': profile, 'height': height})
-        posts = new_posts
+        else:
+            profile, height = domed_profile(get_profile(p), p['height'], p['waist_rx'], p['waist_ry'])
+        new_posts.append({**p, 'profile': profile, 'height': height})
+    posts = new_posts
 
     # Each post's ellipse is rotated to track the local direction of the
     # arch (see compute_post_rotations) rather than a fixed global axis;
