@@ -1,11 +1,15 @@
 """Parametric toe-spacer generator.
 
-Reads a JSON config (plate settings + per-post x,y,height,waist radii,
-profile) and builds a solid model with build123d, exporting STL (and
-optionally the mirrored second foot). The plate outline is not stored in the
-config - it's derived from the current post layout each run (see
-plate_outline.py), so moving/resizing/adding posts always produces a plate
-that fits them.
+Reads a JSON config (plate settings + per-post x,y,height,waist radii) and
+builds a solid model with build123d, exporting STL (and optionally the
+mirrored second foot). The plate outline is not stored in the config - it's
+derived from the current post layout each run (see plate_outline.py), so
+moving/resizing/adding posts always produces a plate that fits them. Each
+post's silhouette profile likewise isn't stored in the config - it's looked
+up by post name from default_profiles.DEFAULT_PROFILES (see get_profile()
+there), since it's reverse-engineered/verified data, not something to
+hand-tune per config. A post can still set its own `profile` key to override
+the default.
 
 Usage:
     python generate.py config.json out_prefix [--both] [--test-fit] [--pillars N] [--bambu]
@@ -32,6 +36,7 @@ import argparse
 import build123d as bd
 from plate_outline import compute_outline, compute_post_rotations
 from bambu_project import write_bambu_project
+from default_profiles import get_profile
 
 
 def build_plate(outline_pts, thickness):
@@ -139,7 +144,7 @@ def build_foot(config, mirror=False, test_fit=False, pillars=None):
     if test_fit:
         new_posts = []
         for p in posts:
-            profile, height = test_fit_profile(p['profile'], p['height'], p['waist_rx'], p['waist_ry'])
+            profile, height = test_fit_profile(get_profile(p), p['height'], p['waist_rx'], p['waist_ry'])
             new_posts.append({**p, 'profile': profile, 'height': height})
         posts = new_posts
 
@@ -161,7 +166,7 @@ def build_foot(config, mirror=False, test_fit=False, pillars=None):
     part = build_plate(outline, thickness)
     for post, rotation_deg in zip(posts, rotations):
         p = build_post(post['x'], post['y'], post['height'], post['waist_rx'], post['waist_ry'],
-                        post['profile'], thickness, rotation_deg=rotation_deg)
+                        get_profile(post), thickness, rotation_deg=rotation_deg)
         part = part + p
     return part
 

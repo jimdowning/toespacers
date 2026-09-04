@@ -71,6 +71,7 @@ import numpy as np
 from shapely.geometry import Point
 from shapely.affinity import scale as _affine_scale, translate as _affine_translate, rotate as _affine_rotate
 from shapely.ops import unary_union
+from default_profiles import get_profile
 
 
 def _order_along_arch(centers):
@@ -149,7 +150,7 @@ def _base_radii(post):
     """Post footprint semi-axes (rx, ry) at h=0 (where it meets the plate).
     Kept as a pair rather than averaged into a single radius - see module
     docstring for why that matters once rx and ry differ noticeably."""
-    h0, rscale0 = post['profile'][0]
+    h0, rscale0 = get_profile(post)[0]
     return rscale0 * post['waist_rx'], rscale0 * post['waist_ry']
 
 

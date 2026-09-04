@@ -129,8 +129,7 @@ Open `configs/config.json`. Each post has:
 {
   "name": "post_A_arch",
   "x": -30.21, "y": -0.77,       "waist_rx": 5.05, "waist_ry": 5.05,
-  "height": 21.92,
-  "profile": [ ... ]
+  "height": 21.92
 }
 ```
 
@@ -150,12 +149,18 @@ Open `configs/config.json`. Each post has:
   arch is actually turning at that post.
 - **`height`** — apex height above the plate. Not in your original ask but
   cheap to expose; shorten/lengthen a post if the fit calls for it.
-- **`profile`** — leave this alone for routine fitting. It's a list of
-  `[height_fraction, radius_scale]` points describing the post's silhouette
-  from the plate (`h=0`) to its rounded tip (`h=1`), as a *multiple of the
-  waist radius*. Editing `waist_rx`/`waist_ry` rescales the whole post
-  (base flare and cap bulge included) around this fixed shape. Only touch
-  `profile` for more advanced reshaping (e.g. a flatter cap, a lower waist).
+
+There's no `profile` field to edit either — each post's silhouette (the list
+of `[height_fraction, radius_scale]` points describing its shape from the
+plate, `h=0`, to its rounded tip, `h=1`, as a *multiple of the waist radius*)
+is looked up by `name` from `default_profiles.DEFAULT_PROFILES` instead of
+being repeated in every `configs/*.json` file — it's reverse-engineered,
+verified data (see "Verifying the recreation" below), not something routine
+fitting ever touches. Editing `waist_rx`/`waist_ry` still rescales the whole
+post (base flare and cap bulge included) around that fixed shape. For the
+rare case of deliberate reshaping (e.g. a flatter cap, a lower waist), a
+post can still set its own `"profile": [ ... ]` in the config to override
+the default for just that post.
 
 `plate` also has one outline knob, optional (default shown):
 
@@ -198,7 +203,8 @@ Each post is a lofted, roughly-axisymmetric solid: wide flared base merging
 into the plate → narrows to the waist (~50% height in the original) → bulges
 back out to a rounded cap (~90-95% height) → tapers to a small dome apex.
 Think spool/hourglass, not a plain cylinder. `generate.py` builds this as a
-sequence of ellipses (from `profile`, scaled by `waist_rx`/`waist_ry`) lofted
+sequence of ellipses (from the post's profile - `default_profiles.py`,
+unless the config overrides it - scaled by `waist_rx`/`waist_ry`) lofted
 with straight (`ruled`) segments between them — a true smooth spline loft was
 tried first but overshot past its end sections (bulging past the profile's
 own bounds); the ruled loft with ~15 profile points per post tracks the
@@ -351,7 +357,7 @@ crib dimensions from), the whole `configs/config.json` can be rebuilt from it:
 
 ```bash
 ./run.sh tools/extract_profiles.py <file.3mf> 3D/Objects/object_1.model /tmp/profiles.json
-./run.sh tools/derive_config.py /tmp/profiles.json configs/config.json
+./run.sh tools/derive_config.py /tmp/profiles.json configs/config.json default_profiles.py
 ```
 
 `extract_profiles.py` slices the mesh into thin z-layers, tracks each post's
@@ -361,9 +367,10 @@ thickness via binary search on where the cross-section stops being one
 merged blob (it also traces the raw plate outline into `plate_outline_raw`,
 but that's unused now - see "How the plate outline works" above).
 `derive_config.py` turns the post tracks into the `x`/`y`/`waist_rx`/
-`waist_ry`/`height`/`profile` structure above, simplifying the profile curve
-with Ramer-Douglas-Peucker down to an editable number of points, and fills in
-a default `margin` value.
+`waist_ry`/`height` structure above, simplifying each post's profile curve
+with Ramer-Douglas-Peucker down to an editable number of points and writing
+it into `default_profiles.py` (not `configs/config.json` - see "Fitting your
+feet" above), and fills in a default `margin` value.
 
 One gotcha hit and fixed here: the first pass at profile extraction fit an
 ellipse to each cross-section via the covariance matrix of its boundary
