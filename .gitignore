@@ -1,0 +1,9 @@
+# Generated build/render artifacts - regenerate any time with generate.py
+# and the tools/ scripts (see README.md). Worth keeping one permanently?
+# Copy it into milestones/ instead, which *is* tracked - see milestones/README.md.
+outputs/
+
+# Python virtualenv (see setup.sh) and bytecode cache
+venv/
+__pycache__/
+*.pyc
