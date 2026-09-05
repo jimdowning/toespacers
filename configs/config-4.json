@@ -17,14 +17,14 @@
    "name": "post_B",
    "x": 21,
    "y": 12,
-   "waist_rx": 4.2,
+   "waist_rx": 4,
    "waist_ry": 6,
-   "height": 17
+   "height": 20
   },
   {
    "name": "post_C",
    "x": 41,
-   "y": 9.544,
+   "y": 9,
    "waist_rx": 4.3,
    "waist_ry": 6,
    "height": 16.92
